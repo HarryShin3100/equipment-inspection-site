@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="검수조서 PDF에서 핵심 정보를 자동으로 채우고 납품서류, 필수 서명, 후속 업무를 관리하는 자산 검수 진행표">
+  <meta name="theme-color" content="#102a43">
+  <title>자산 검수 진행표</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23102a43'/%3E%3Cpath d='M18 16h28v34H18z' fill='%23fff'/%3E%3Cpath d='M25 12h14v8H25z' fill='%235bc0be'/%3E%3Cpath d='m24 34 5 5 11-13' fill='none' stroke='%23102a43' stroke-width='5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      color-scheme: light;
+      --navy: #14213d;
+      --navy-2: #263554;
+      --blue: #2457d6;
+      --cyan: #087f8c;
+      --teal: #0f766e;
+      --green: #15803d;
+      --amber: #b45309;
+      --red: #b42318;
+      --ink: #17202a;
+      --muted: #627184;
+      --line: #dce3ec;
+      --soft: #f0f4f8;
+      --paper: #ffffff;
+      --bg: #f3f6fa;
+      --shadow: 0 14px 36px rgba(20, 33, 61, .08);
+      font-family: Pretendard, "Noto Sans KR", "Apple SD Gothic Neo", system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-size: 16px; line-height: 1.5; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible {
+      outline: 3px solid rgba(29, 78, 216, .25); outline-offset: 2px;
+    }
+
+    .topbar { background: rgba(255,255,255,.96); color: var(--navy); border-bottom: 1px solid var(--line); box-shadow: 0 1px 0 rgba(20,33,61,.025); }
+    .topbar-inner { max-width: 1480px; margin: 0 auto; padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-mark { width: 44px; height: 44px; display: grid; place-items: center; color: white; background: linear-gradient(145deg, #14213d, #2457d6); border-radius: 13px; box-shadow: 0 7px 18px rgba(36,87,214,.22); }
+    .brand h1 { margin: 0; font-size: 1.35rem; letter-spacing: -.025em; }
+    .brand p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
+    .privacy-note { color: var(--muted); font-size: .82rem; text-align: right; max-width: 430px; padding: 8px 12px; border-radius: 9px; background: #f4f7fb; }
+
+    main { max-width: 1480px; margin: 0 auto; padding: 24px 28px 48px; }
+    .summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .stat { position: relative; overflow: hidden; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 5px 16px rgba(20,33,61,.035); }
+    .stat::after { content: ''; position: absolute; inset: auto 0 0; height: 3px; background: #c8d3df; }
+    .stat-label { color: var(--muted); font-size: .86rem; font-weight: 700; }
+    .stat-value { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; margin-top: 3px; }
+    .stat strong { font-size: 1.8rem; letter-spacing: -.04em; }
+    .stat small { font-size: .78rem; color: var(--muted); }
+    .stat.ready::after { background: var(--green); }
+    .stat.sign::after { background: var(--amber); }
+    .stat.collect::after { background: var(--cyan); }
+
+    .toolbar { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 12px; display: flex; gap: 10px; align-items: center; margin-bottom: 14px; box-shadow: var(--shadow); }
+    .search { position: relative; flex: 1 1 360px; }
+    .search input { width: 100%; min-height: 44px; padding: 0 14px 0 42px; border: 1px solid #bcccdc; border-radius: 10px; background: #fbfdff; }
+    .search svg { position: absolute; left: 14px; top: 12px; color: var(--muted); }
+    .toolbar select { min-height: 44px; border: 1px solid #bcccdc; border-radius: 10px; padding: 0 34px 0 12px; background: white; color: var(--ink); }
+    .btn { min-height: 42px; border-radius: 10px; border: 1px solid transparent; padding: 0 15px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .btn-primary { background: linear-gradient(135deg, var(--blue), #1645b8); color: white; box-shadow: 0 5px 12px rgba(36,87,214,.18); }
+    .btn-primary:hover { background: #1e40af; }
+    .btn-secondary { background: white; color: var(--navy); border-color: #bcccdc; }
+    .btn-secondary:hover { background: var(--soft); }
+    .btn-danger { color: var(--red); background: white; border-color: #f4c7c3; }
+    .btn:disabled { cursor: not-allowed; opacity: .5; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: .82rem; padding: 0 4px 12px; }
+    .legend span { display: inline-flex; gap: 7px; align-items: center; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: #94a3b8; }
+    .dot.received { background: var(--blue); }
+    .dot.signed { background: var(--green); }
+    .dot.wait { background: var(--amber); }
+
+    .table-wrap { background: var(--paper); border: 1px solid var(--line); border-radius: 16px; overflow: auto; box-shadow: var(--shadow); }
+    table { width: 100%; min-width: 1420px; border-collapse: collapse; }
+    th { position: sticky; top: 0; z-index: 2; background: #edf2f7; color: var(--navy-2); font-size: .78rem; letter-spacing: -.01em; text-align: center; padding: 12px 8px; border-bottom: 1px solid #cbd5e1; white-space: nowrap; }
+    th.case-col { text-align: left; min-width: 360px; left: 0; z-index: 3; padding-left: 16px; }
+    td { padding: 12px 8px; border-bottom: 1px solid #e8edf2; text-align: center; vertical-align: middle; }
+    tbody tr:hover td { background: #fafcff; }
+    td.case-cell { position: sticky; left: 0; z-index: 1; min-width: 360px; background: white; text-align: left; padding: 14px 16px; box-shadow: 7px 0 13px rgba(16,42,67,.04); }
+    tbody tr:hover td.case-cell { background: #fafcff; }
+    .case-heading { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+    .case-number { font-weight: 950; color: var(--navy); font-size: 1rem; letter-spacing: .01em; }
+    .order-badge { padding: 2px 7px; border-radius: 6px; color: #36516f; background: #edf2f7; font-size: .7rem; font-weight: 800; }
+    .case-product { max-width: 325px; font-weight: 800; line-height: 1.35; color: #1d2a44; }
+    .case-meta { display: grid; grid-template-columns: 1fr 1.15fr; gap: 4px 12px; margin-top: 9px; }
+    .case-meta div { min-width: 0; display: grid; grid-template-columns: auto 1fr; gap: 5px; color: var(--muted); font-size: .76rem; }
+    .case-meta div:nth-child(3) { grid-column: 1 / -1; }
+    .case-meta b { color: #607188; font-weight: 800; }
+    .case-meta span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--navy-2); }
+    .case-amount { margin-top: 8px; color: var(--navy-2); font-size: .82rem; font-weight: 900; }
+    .insurance-tag { display: inline-block; margin-left: 5px; padding: 1px 6px; border-radius: 999px; background: #eef2ff; color: #4338ca; font-size: .68rem; }
+    .folder-row { margin-top: 7px; display: flex; align-items: center; gap: 5px; color: #66788a; font-size: .72rem; }
+    .folder-name { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .copy-btn, .icon-btn { border: 0; background: transparent; color: var(--muted); padding: 3px; border-radius: 5px; }
+    .copy-btn:hover, .icon-btn:hover { background: var(--soft); color: var(--navy); }
+
+    .doc-check { width: 27px; height: 27px; border-radius: 8px; border: 1.5px solid #aab8c6; background: white; display: inline-grid; place-items: center; color: white; }
+    .doc-check.on { background: var(--blue); border-color: var(--blue); }
+    .doc-check.pending { background: #fff8eb; border-color: #e9a23b; color: var(--amber); }
+    .doc-check svg { pointer-events: none; }
+    .doc-cell { min-width: 84px; }
+    .doc-cell.critical { background: #fffbf2; }
+    .not-required { width: 27px; height: 27px; border-radius: 8px; display: inline-grid; place-items: center; background: #edf2f7; color: #64748b; font-weight: 900; }
+    .sub-label { display: block; margin-top: 5px; color: var(--muted); font-size: .7rem; }
+    .sub-label.warn { color: var(--amber); font-weight: 800; }
+    .status-pill { display: inline-flex; align-items: center; justify-content: center; min-width: 108px; padding: 6px 10px; border-radius: 999px; font-size: .77rem; font-weight: 900; white-space: nowrap; }
+    .status-empty { background: #edf2f7; color: #64748b; }
+    .status-collect { background: #e0f2fe; color: #075985; }
+    .status-sign { background: #fff2d9; color: #92400e; }
+    .status-amount { background: #fee2e2; color: #991b1b; }
+    .status-followup { background: #ede9fe; color: #5b21b6; }
+    .status-complete { background: #ccfbf1; color: #115e59; }
+    .progress { width: 105px; height: 7px; border-radius: 99px; background: #e3eaf1; overflow: hidden; margin: 7px auto 2px; }
+    .progress span { display: block; height: 100%; background: var(--cyan); border-radius: inherit; }
+    .progress-text { color: var(--muted); font-size: .72rem; }
+    .row-actions { display: flex; justify-content: center; gap: 4px; }
+    .submit-check { display: inline-flex; align-items: center; gap: 7px; font-size: .76rem; font-weight: 800; color: var(--navy-2); white-space: nowrap; }
+    .submit-check input { width: 18px; height: 18px; accent-color: var(--blue); }
+    .remark-cell { min-width: 220px; max-width: 280px; text-align: left; color: var(--navy-2); font-size: .8rem; white-space: normal; }
+    .remark-input { width: 100%; min-height: 62px; resize: vertical; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px 9px; background: #fbfdff; color: var(--ink); font-size: .8rem; line-height: 1.4; }
+
+    .empty { padding: 70px 24px; text-align: center; color: var(--muted); }
+    .empty-icon { width: 58px; height: 58px; margin: 0 auto 13px; border-radius: 16px; background: var(--soft); display: grid; place-items: center; color: var(--navy-2); }
+    .empty h2 { margin: 0 0 5px; color: var(--navy); font-size: 1.05rem; }
+    .empty p { margin: 0 0 16px; font-size: .9rem; }
+    .hidden { display: none !important; }
+
+    dialog { width: min(720px, calc(100vw - 28px)); max-height: calc(100vh - 32px); border: 0; border-radius: 20px; padding: 0; overflow: auto; box-shadow: 0 28px 80px rgba(15, 23, 42, .28); }
+    dialog::backdrop { background: rgba(15, 23, 42, .48); backdrop-filter: blur(2px); }
+    .dialog-head { position: sticky; top: 0; z-index: 2; padding: 19px 24px 15px; border-bottom: 1px solid var(--line); background: white; display: flex; align-items: center; justify-content: space-between; }
+    .dialog-head h2 { margin: 0; color: var(--navy); font-size: 1.18rem; }
+    .dialog-body { padding: 20px 24px; }
+    .pdf-import { margin-bottom: 18px; padding: 16px; border: 1px dashed #8aa4c3; border-radius: 14px; background: linear-gradient(135deg, #f7faff, #f0f6ff); }
+    .pdf-import-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .pdf-import strong { color: var(--navy); font-size: .9rem; }
+    .pdf-import p { margin: 3px 0 0; color: var(--muted); font-size: .76rem; }
+    .pdf-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    .pdf-status { margin-top: 9px; padding: 8px 10px; border-radius: 8px; background: white; color: var(--navy-2); font-size: .78rem; }
+    .pdf-status.error { color: var(--red); background: #fff1f0; }
+    .pdf-status.success { color: var(--green); background: #ecfdf3; }
+    .document-review { margin: 12px 0 18px; border: 1px solid var(--line); border-radius: 12px; background: #fff; overflow: hidden; }
+    .document-review summary { cursor: pointer; padding: 11px 13px; color: var(--navy-2); font-size: .82rem; font-weight: 900; background: #f7f9fc; }
+    .review-grid { display: grid; grid-template-columns: 180px 1fr; gap: 14px; padding: 14px; }
+    .preview-figure { margin: 0; }
+    .preview-figure img { display: block; width: 100%; max-height: 250px; object-fit: contain; border: 1px solid var(--line); border-radius: 8px; background: #eef2f7; }
+    .preview-figure figcaption { margin-top: 6px; color: var(--muted); font-size: .7rem; text-align: center; }
+    .extracted-list { display: grid; grid-template-columns: auto 1fr; align-content: start; gap: 5px 10px; margin: 0; font-size: .75rem; }
+    .extracted-list dt { color: var(--muted); font-weight: 800; }
+    .extracted-list dd { margin: 0; color: var(--navy-2); font-weight: 700; word-break: break-word; }
+    .review-flag { color: var(--amber); font-size: .68rem; font-weight: 800; }
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    .field label { font-size: .83rem; color: var(--navy-2); font-weight: 900; }
+    .field input, .field textarea { width: 100%; border: 1px solid #bcccdc; border-radius: 9px; padding: 10px 11px; background: #fbfdff; }
+    .field input.needs-review { border-color: #d8922b; background: #fffaf0; box-shadow: 0 0 0 2px rgba(216,146,43,.1); }
+    .field textarea { min-height: 75px; resize: vertical; }
+    .folder-preview { padding: 11px 12px; border-radius: 9px; background: var(--soft); color: var(--navy-2); font-size: .82rem; word-break: break-all; }
+    .dialog-actions { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; gap: 9px; padding: 15px 24px 19px; background: white; border-top: 1px solid var(--line); }
+    .toast { position: fixed; right: 24px; bottom: 24px; z-index: 10; background: var(--navy); color: white; border-radius: 10px; padding: 12px 15px; box-shadow: var(--shadow); font-size: .86rem; transform: translateY(18px); opacity: 0; pointer-events: none; transition: .2s ease; }
+    .toast.show { transform: translateY(0); opacity: 1; }
+
+    @media (max-width: 900px) {
+      .topbar-inner, main { padding-left: 16px; padding-right: 16px; }
+      .privacy-note { display: none; }
+      .summary { grid-template-columns: repeat(2, 1fr); }
+      .summary .stat:last-child { grid-column: 1 / -1; }
+      .toolbar { flex-wrap: wrap; }
+      .search { flex-basis: 100%; }
+      .toolbar select { flex: 1; }
+    }
+    @media (max-width: 520px) {
+      .brand p { display: none; }
+      .summary { gap: 9px; }
+      .stat { padding: 13px; }
+      .stat strong { font-size: 1.5rem; }
+      .fields { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      .review-grid { grid-template-columns: 1fr; }
+      .preview-figure img { max-height: 220px; }
+      .btn { padding-left: 12px; padding-right: 12px; }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">
+          <svg width="23" height="23" viewBox="0 0 24 24" fill="none"><path d="M7 3h10v3h2v15H5V6h2V3Z" stroke="currentColor" stroke-width="1.7"/><path d="m8.5 13 2.2 2.2 4.8-5" stroke="#5bc0be" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <div><h1>자산 검수 진행표</h1><p>검수번호 기준 납품서류 · 서명 · 후속업무 관리</p></div>
+      </div>
+      <div class="privacy-note">이 페이지에는 서류 원본이나 계좌번호를 저장하지 않고, 업무 진행 상태만 기록합니다.</div>
+    </div>
+  </header>
+
+  <main>
+    <section class="summary" aria-label="진행 현황 요약">
+      <article class="stat"><div class="stat-label">전체 검수 건</div><div class="stat-value"><strong id="totalCount">0</strong><small>건</small></div></article>
+      <article class="stat collect"><div class="stat-label">서류 수집 중</div><div class="stat-value"><strong id="collectCount">0</strong><small>건</small></div></article>
+      <article class="stat sign"><div class="stat-label">서명 대기</div><div class="stat-value"><strong id="signCount">0</strong><small>건</small></div></article>
+      <article class="stat ready"><div class="stat-label">후속 처리 중</div><div class="stat-value"><strong id="followupCount">0</strong><small>건</small></div></article>
+      <article class="stat"><div class="stat-label">업무 완료</div><div class="stat-value"><strong id="completeCount">0</strong><small>건</small></div></article>
+    </section>
+
+    <section class="toolbar" aria-label="검색 및 필터">
+      <div class="search">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="2"/><path d="m16 16 4 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        <input id="searchInput" type="search" placeholder="검수번호, 물품명, 거래처명 검색" aria-label="검수 건 검색">
+      </div>
+      <select id="statusFilter" aria-label="진행상태 필터">
+        <option value="all">모든 진행상태</option>
+        <option value="amount">금액 입력 필요</option>
+        <option value="collect">서류 수집 중</option>
+        <option value="sign">서명 대기</option>
+        <option value="followup">후속 처리 중</option>
+        <option value="complete">업무 완료</option>
+      </select>
+      <button class="btn btn-secondary" id="sampleBtn" type="button">샘플 보기</button>
+      <button class="btn btn-primary" id="addBtn" type="button">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        검수 건 추가
+      </button>
+    </section>
+
+    <div class="legend" aria-label="표시 안내">
+      <span><i class="dot received"></i>서류 완료</span><span><i class="dot wait"></i>서명 대기</span><span>1,000,000원부터 하자보증보험 필수</span><span>검수번호 작은 순 자동정렬</span>
+    </div>
+
+    <section class="table-wrap" aria-label="자산 검수 진행 목록">
+      <table id="trackerTable">
+        <thead><tr>
+          <th class="case-col">검수 기본정보</th>
+          <th class="doc-cell">검수조서<br><small>서명 완료</small></th>
+          <th class="doc-cell">물품 인수<br>확인서<br><small>서명 완료</small></th>
+          <th class="doc-cell">온라인 입금<br>의뢰서</th>
+          <th class="doc-cell">거래명세서</th>
+          <th class="doc-cell">세금계산서</th>
+          <th class="doc-cell">통장사본</th>
+          <th class="doc-cell">사업자<br>등록증</th>
+          <th class="doc-cell">하자보증<br>보험</th>
+          <th>진행상태</th>
+          <th>과제 담당자<br>메일</th>
+          <th>검수관리대장<br>기록</th>
+          <th>관리</th>
+          <th>비고</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+      <div class="empty" id="emptyState">
+        <div class="empty-icon" aria-hidden="true"><svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M6 3h12v18H6z" stroke="currentColor" stroke-width="1.7"/><path d="M9 8h6M9 12h6M9 16h4" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <h2>등록된 검수 건이 없습니다</h2>
+        <p>검수조서를 첨부하면 주요 정보를 자동으로 채워드립니다.</p>
+        <button class="btn btn-primary" type="button" id="emptyAddBtn">첫 검수 건 추가</button>
+      </div>
+    </section>
+  </main>
+
+  <dialog id="caseDialog">
+    <form method="dialog" id="caseForm">
+      <div class="dialog-head"><h2 id="dialogTitle">검수 건 추가</h2><button class="icon-btn" data-close-dialog aria-label="닫기" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
+      <div class="dialog-body">
+        <div class="pdf-import">
+          <div class="pdf-import-top">
+            <div><strong>검수조서 자동입력</strong><p>PDF 또는 사진을 이 브라우저 안에서만 분석합니다.</p></div>
+            <label class="btn btn-secondary" for="pdfInput">파일 선택</label>
+            <input class="pdf-file" id="pdfInput" type="file" accept="application/pdf,.pdf,image/png,image/jpeg,.png,.jpg,.jpeg">
+          </div>
+          <div class="pdf-status hidden" id="pdfStatus" role="status" aria-live="polite"></div>
+        </div>
+        <details class="document-review hidden" id="documentReview">
+          <summary>원본 및 자동 추출 결과 확인</summary>
+          <div class="review-grid">
+            <figure class="preview-figure"><img id="documentPreview" alt="업로드한 검수조서 첫 페이지 미리보기"><figcaption id="previewCaption"></figcaption></figure>
+            <dl class="extracted-list" id="extractedList"></dl>
+          </div>
+        </details>
+        <div class="fields">
+          <div class="field"><label for="orderNo">발주번호</label><input id="orderNo" name="orderNo" autocomplete="off" placeholder="예: 505"></div>
+          <div class="field"><label for="inspectionNo">검수번호</label><input id="inspectionNo" name="inspectionNo" required autocomplete="off" placeholder="예: 00029"></div>
+          <div class="field full"><label for="contractPeriod">계약기간</label><input id="contractPeriod" name="contractPeriod" autocomplete="off" placeholder="예: 2026-04-24 ~ 2026-05-22"></div>
+          <div class="field full"><label for="product">물품명 <span style="font-weight:500;color:var(--muted)">(검수조서의 제목)</span></label><input id="product" name="product" required autocomplete="off" placeholder="예: 산학협력단 연구개발사업 수행을 위한 시설공사"></div>
+          <div class="field"><label for="amount">납품금액</label><input id="amount" name="amount" required inputmode="numeric" autocomplete="off" placeholder="예: 23,300,000"></div>
+          <div class="field"><label for="vendor">거래처명 <span style="font-weight:500;color:var(--muted)">(납품업체)</span></label><input id="vendor" name="vendor" required autocomplete="off" placeholder="예: 재성이엔지"></div>
+          <div class="field full"><label>폴더명 미리보기</label><div class="folder-preview" id="folderPreview">검수번호-제품명-거래처명</div></div>
+          <div class="field full"><label for="note">비고 <span style="font-weight:500;color:var(--muted)">(선택)</span></label><textarea id="note" name="note" placeholder="보완 요청 사항이나 담당자 확인 내용을 기록하세요."></textarea></div>
+        </div>
+      </div>
+      <div class="dialog-actions"><button class="btn btn-secondary" data-close-dialog type="button">취소</button><button class="btn btn-primary" value="save" id="saveCaseBtn" type="submit">저장</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script type="module">
+    import * as pdfjsLib from './vendor/pdf.min.mjs';
+    import Tesseract from './vendor/tesseract.esm.min.js';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './vendor/pdf.worker.min.mjs';
+    (() => {
+      const DOCS = [
+        { key: 'inspectionReport', name: '검수조서', signKey: 'inspectionSigned' },
+        { key: 'receiptConfirmation', name: '물품 인수 확인서', signKey: 'receiptSigned' },
+        { key: 'paymentRequest', name: '온라인 입금 의뢰서' },
+        { key: 'transactionStatement', name: '거래명세서' },
+        { key: 'taxInvoice', name: '세금계산서' },
+        { key: 'bankbookCopy', name: '통장사본' },
+        { key: 'businessRegistration', name: '사업자등록증' },
+        { key: 'warrantyInsurance', name: '하자보증보험 서류' }
+      ];
+      const STORAGE_KEY = 'assetInspectionTracker.v1';
+      const WARRANTY_THRESHOLD = 1000000;
+      const $ = (id) => document.getElementById(id);
+      let cases = loadCases();
+      let editingId = null;
+      let pdfImported = false;
+      let lastStructuredData = null;
+      let toastTimer;
+
+      function blankDocs() { return Object.fromEntries(DOCS.map(d => [d.key, false])); }
+      function normalize(value) { return String(value || '').trim().replace(/[\\/:*?\"<>|]/g, '_').replace(/\s+/g, ' '); }
+      function folderName(item) { return [item.inspectionNo, item.product, item.vendor].map(normalize).join('-'); }
+      function parseAmount(value) { const amount = Number(String(value ?? '').replace(/[^0-9]/g, '')); return Number.isFinite(amount) ? amount : 0; }
+      function formatAmount(value) { const amount = Number(value); return amount > 0 ? amount.toLocaleString('ko-KR') + '원' : '금액 미입력'; }
+      function hasAmount(item) { return Number(item.amount) > 0; }
+      function warrantyRequired(item) { return hasAmount(item) && Number(item.amount) >= WARRANTY_THRESHOLD; }
+      function requiredDocs(item) { return DOCS.filter(d => d.key !== 'warrantyInsurance' || warrantyRequired(item)); }
+      function receivedRequiredCount(item) { return requiredDocs(item).filter(d => item.docs?.[d.key]).length; }
+      function loadCases() {
+        try { const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); return Array.isArray(parsed) ? parsed : []; }
+        catch { return []; }
+      }
+      function compareInspectionNo(a, b) { return String(a.inspectionNo).localeCompare(String(b.inspectionNo), 'ko', { numeric: true, sensitivity: 'base' }); }
+      function saveCases() { cases.sort(compareInspectionNo); localStorage.setItem(STORAGE_KEY, JSON.stringify(cases)); }
+      function documentComplete(item, doc) { return !!item.docs?.[doc.key] && (!doc.signKey || !!item[doc.signKey]); }
+      function completedRequiredCount(item) { return requiredDocs(item).filter(doc => documentComplete(item, doc)).length; }
+      function showToast(message) {
+        const toast = $('toast'); toast.textContent = message; toast.classList.add('show');
+        clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 1900);
+      }
+      function statusOf(item) {
+        if (!hasAmount(item)) return 'amount';
+        const docs = requiredDocs(item);
+        const docCount = receivedRequiredCount(item);
+        const signaturesReady = docs.filter(doc => doc.signKey).every(doc => documentComplete(item, doc));
+        if (docCount !== docs.length) return docCount === 0 ? 'empty' : 'collect';
+        if (!signaturesReady) return 'sign';
+        if (item.emailSent && item.sheetRecorded) return 'complete';
+        return 'followup';
+      }
+      function statusLabel(status) {
+        return ({ amount: '금액 입력 필요', empty: '접수 대기', collect: '서류 수집 중', sign: '서명 대기', followup: '후속 처리 중', complete: '업무 완료' })[status];
+      }
+      function progressOf(item) {
+        const total = requiredDocs(item).length + 2;
+        const done = completedRequiredCount(item) + Number(!!item.emailSent) + Number(!!item.sheetRecorded);
+        return Math.round((done / total) * 100);
+      }
+      function icon(type) {
+        if (type === 'check') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="m5 12 4 4L19 6" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+        if (type === 'pen') return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="m14 5 5 5M4 20l3.5-.8L19 7.7a1.4 1.4 0 0 0 0-2L18.3 5a1.4 1.4 0 0 0-2 0L4.8 16.5 4 20Z" stroke="currentColor" stroke-width="1.8"/></svg>';
+        if (type === 'trash') return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
+        return '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><rect x="8" y="8" width="11" height="11" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M16 8V5H5v11h3" stroke="currentColor" stroke-width="1.8"/></svg>';
+      }
+      function renderDocCell(item, doc, index) {
+        const received = !!item.docs?.[doc.key];
+        if (doc.key === 'warrantyInsurance' && !hasAmount(item)) {
+          return `<td class="doc-cell"><span class="not-required">?</span><span class="sub-label warn">금액 확인</span></td>`;
+        }
+        if (doc.key === 'warrantyInsurance' && !warrantyRequired(item)) {
+          return `<td class="doc-cell"><span class="not-required">—</span><span class="sub-label">해당 없음</span></td>`;
+        }
+        if (!doc.signKey) {
+          return `<td class="doc-cell"><button class="doc-check ${received ? 'on' : ''}" data-action="toggle-doc" data-id="${item.id}" data-key="${doc.key}" aria-label="${doc.name} ${received ? '접수 취소' : '접수 완료'}" aria-pressed="${received}">${received ? icon('check') : ''}</button>${received ? '<span class="sub-label">접수</span>' : ''}</td>`;
+        }
+        const signed = !!item[doc.signKey];
+        const complete = received && signed;
+        return `<td class="doc-cell critical"><button class="doc-check ${complete ? 'on' : received ? 'pending' : ''}" data-action="toggle-signed-doc" data-id="${item.id}" data-key="${doc.key}" data-sign-key="${doc.signKey}" aria-label="${doc.name} ${complete ? '완료 취소' : '서명까지 완료'}" aria-pressed="${complete}">${complete ? icon('check') : received ? '서명' : ''}</button>${received ? `<span class="sub-label ${complete ? '' : 'warn'}">${complete ? '완료' : '서명 필요'}</span>` : ''}</td>`;
+      }
+      function filteredCases() {
+        const term = $('searchInput').value.trim().toLowerCase();
+        const filter = $('statusFilter').value;
+        return cases.filter(item => {
+          const matchesText = !term || `${item.orderNo || ''} ${item.inspectionNo} ${item.product} ${item.vendor} ${item.contractPeriod || ''}`.toLowerCase().includes(term);
+          const status = statusOf(item);
+          const matchesStatus = filter === 'all' || filter === status || (filter === 'collect' && status === 'empty');
+          return matchesText && matchesStatus;
+        }).sort(compareInspectionNo);
+      }
+      function render() {
+        const visible = filteredCases();
+        $('tableBody').innerHTML = visible.map(item => {
+          const status = statusOf(item); const progress = progressOf(item);
+          const requiredCount = requiredDocs(item).length; const completedCount = completedRequiredCount(item);
+          return `<tr>
+            <td class="case-cell"><div class="case-heading"><span class="case-number">${escapeHtml(item.inspectionNo)}</span>${item.orderNo ? `<span class="order-badge">발주 ${escapeHtml(item.orderNo)}</span>` : ''}</div><div class="case-product">${escapeHtml(item.product)}</div><div class="case-meta"><div><b>업체</b><span title="${escapeHtml(item.vendor)}">${escapeHtml(item.vendor)}</span></div><div><b>금액</b><span>${formatAmount(item.amount)}</span></div>${item.contractPeriod ? `<div><b>계약기간</b><span title="${escapeHtml(item.contractPeriod)}">${escapeHtml(item.contractPeriod)}</span></div>` : ''}</div><div class="case-amount">${hasAmount(item) ? `<span class="insurance-tag">${warrantyRequired(item) ? '하자보험 필수' : '하자보험 제외'}</span>` : ''}</div><div class="folder-row"><span aria-hidden="true">▣</span><span class="folder-name" title="${escapeHtml(folderName(item))}">${escapeHtml(folderName(item))}</span><button class="copy-btn" data-action="copy" data-id="${item.id}" aria-label="폴더명 복사">${icon('copy')}</button></div></td>
+            ${DOCS.map((doc, i) => renderDocCell(item, doc, i)).join('')}
+            <td><span class="status-pill status-${status}">${statusLabel(status)}</span><div class="progress"><span style="width:${progress}%"></span></div><div class="progress-text">${progress}% · ${completedCount}/${requiredCount} 완료서류</div></td>
+            <td><label class="submit-check"><input type="checkbox" data-action="email" data-id="${item.id}" ${item.emailSent ? 'checked' : ''}> 발송 완료</label></td>
+            <td><label class="submit-check"><input type="checkbox" data-action="sheet" data-id="${item.id}" ${item.sheetRecorded ? 'checked' : ''}> 기록 완료</label></td>
+            <td><div class="row-actions"><button class="icon-btn" data-action="edit" data-id="${item.id}" aria-label="검수 건 수정">${icon('pen')}</button><button class="icon-btn" data-action="delete" data-id="${item.id}" aria-label="검수 건 삭제">${icon('trash')}</button></div></td>
+            <td class="remark-cell"><textarea class="remark-input" data-action="note" data-id="${item.id}" aria-label="${escapeHtml(item.inspectionNo)} 비고" placeholder="비고 입력">${escapeHtml(item.note || '')}</textarea></td>
+          </tr>`;
+        }).join('');
+        const noResults = visible.length === 0;
+        $('trackerTable').classList.toggle('hidden', noResults);
+        $('emptyState').classList.toggle('hidden', !noResults);
+        const hasFilter = $('searchInput').value || $('statusFilter').value !== 'all';
+        $('emptyState').querySelector('h2').textContent = hasFilter ? '검색 결과가 없습니다' : '등록된 검수 건이 없습니다';
+        $('emptyState').querySelector('p').textContent = hasFilter ? '검색어나 진행상태 조건을 바꿔보세요.' : '검수조서를 첨부하면 주요 정보를 자동으로 채워드립니다.';
+        $('emptyAddBtn').classList.toggle('hidden', !!hasFilter);
+        updateSummary();
+      }
+      function updateSummary() {
+        const statuses = cases.map(statusOf);
+        $('totalCount').textContent = cases.length;
+        $('collectCount').textContent = statuses.filter(s => s === 'amount' || s === 'collect' || s === 'empty').length;
+        $('signCount').textContent = statuses.filter(s => s === 'sign').length;
+        $('followupCount').textContent = statuses.filter(s => s === 'followup').length;
+        $('completeCount').textContent = statuses.filter(s => s === 'complete').length;
+      }
+      function escapeHtml(value) { const div = document.createElement('div'); div.textContent = value || ''; return div.innerHTML; }
+      function openDialog(item) {
+        editingId = item?.id || null;
+        pdfImported = false;
+        lastStructuredData = item?.extractedData || null;
+        $('dialogTitle').textContent = item ? '검수 건 수정' : '검수 건 추가';
+        $('orderNo').value = item?.orderNo || '';
+        $('inspectionNo').value = item?.inspectionNo || '';
+        $('contractPeriod').value = item?.contractPeriod || '';
+        $('product').value = item?.product || '';
+        $('amount').value = item?.amount ? Number(item.amount).toLocaleString('ko-KR') : '';
+        $('vendor').value = item?.vendor || '';
+        $('note').value = item?.note || '';
+        $('pdfInput').value = '';
+        $('pdfStatus').className = 'pdf-status hidden';
+        $('pdfStatus').textContent = '';
+        $('documentReview').classList.add('hidden');
+        $('documentReview').open = false;
+        $('documentPreview').removeAttribute('src');
+        $('previewCaption').textContent = '';
+        $('extractedList').innerHTML = '';
+        ['orderNo', 'inspectionNo', 'contractPeriod', 'product', 'amount', 'vendor'].forEach(id => {
+          $(id).classList.remove('needs-review');
+          $(id).removeAttribute('title');
+        });
+        updateFolderPreview();
+        $('caseDialog').showModal(); setTimeout(() => $('inspectionNo').focus(), 0);
+      }
+      function closeDialog() {
+        if ($('caseDialog').open) $('caseDialog').close('cancel');
+      }
+      function updateFolderPreview() {
+        const values = [$('inspectionNo').value || '검수번호', $('product').value || '제품명', $('vendor').value || '거래처명'];
+        $('folderPreview').textContent = values.map(normalize).join('-');
+      }
+      function setPdfStatus(message, type = '') {
+        const status = $('pdfStatus');
+        status.textContent = message;
+        status.className = `pdf-status ${type}`.trim();
+      }
+      function isKnownLabel(value) {
+        return /발\s*주\s*번\s*호|검\s*수\s*번\s*호|계\s*약\s*일\s*자|납\s*품\s*기\s*한|제\s*목|제품\s*명|물품\s*명|납\s*품\s*업\s*체|거래처\s*명|납\s*품\s*금\s*액|inspection\s*(?:number|no)|order\s*(?:number|no)|product|vendor|amount/i.test(value);
+      }
+      function trimAtNextLabel(value) {
+        return String(value || '').replace(/\s+(?=(?:발\s*주\s*번\s*호|검\s*수\s*번\s*호|계\s*약\s*일\s*자|납\s*품\s*기\s*한|납\s*품\s*일\s*자|예\s*산\s*금\s*액|계\s*약\s*금\s*액|납\s*품\s*금\s*액|제\s*목|물품\s*\(?건명\)?|납\s*품\s*업\s*체|과\s*제\s*번\s*호|설\s*치\s*장\s*소)).*$/i, '').trim();
+      }
+      function findPdfValue(chunks, labelPatterns, type) {
+        for (let i = 0; i < chunks.length; i++) {
+          const source = String(chunks[i] || '').replace(/\s+/g, ' ').trim();
+          for (const label of labelPatterns) {
+            const match = source.match(label);
+            if (!match) continue;
+            const tail = source.slice((match.index || 0) + match[0].length).replace(/^[\s:：\-]+/, '').trim();
+            const candidates = [tail, ...chunks.slice(i + 1, i + 4)].map(value => trimAtNextLabel(String(value || '').replace(/\s+/g, ' ').replace(/^[\s:：\-]+/, '').trim()));
+            for (const candidate of candidates) {
+              if (!candidate || isKnownLabel(candidate)) continue;
+              if (type === 'amount') {
+                const amount = parseAmount(candidate);
+                if (amount >= 1000) return amount;
+              } else if (type === 'code') {
+                const value = candidate.match(/[A-Za-z0-9][A-Za-z0-9._\/-]{0,39}/)?.[0];
+                if (value && !/^\d{1,2}[.\/-]\d{1,2}/.test(value)) return value;
+              } else {
+                let value = candidate.split(/\s{2,}|[|]/)[0].replace(/^[◆◇▶▷•·\-]+\s*/, '').trim();
+                if (type === 'vendor') value = value.replace(/(?<=[가-힣])\s+(?=[가-힣])/g, '');
+                if (value.length >= 2 && value.length <= 80 && !/^\d[\d,\s원]*$/.test(value)) return value;
+              }
+            }
+          }
+        }
+        return type === 'amount' ? 0 : '';
+      }
+      function findDateValue(chunks, labels) {
+        for (let i = 0; i < chunks.length; i++) {
+          const source = String(chunks[i] || '').replace(/\s+/g, ' ').trim();
+          for (const label of labels) {
+            const match = source.match(label); if (!match) continue;
+            const candidates = [source.slice((match.index || 0) + match[0].length), ...chunks.slice(i + 1, i + 3)];
+            for (const candidate of candidates) {
+              const date = String(candidate).match(/(20\d{2})\s*(?:년|[.\/-])\s*(\d{1,2})\s*(?:월|[.\/-])\s*(\d{1,2})\s*일?/);
+              if (date) return `${date[1]}-${date[2].padStart(2, '0')}-${date[3].padStart(2, '0')}`;
+            }
+          }
+        }
+        return '';
+      }
+      function tidyOcrTitle(value) {
+        if (!/산\s*학\s*협력단/.test(value) || !/수\s*행\s*을\s*위한/.test(value)) return value;
+        return value.replace(/(?<=[가-힣])\s+(?=[가-힣])/g, '')
+          .replace('산학협력단', '산학협력단 ')
+          .replace('연구개발사업', '연구개발사업 ')
+          .replace('수행을위한', '수행을 위한 ')
+          .replace(/\s+/g, ' ').trim();
+      }
+      function cleanVendor(value) {
+        const cleaned = String(value || '').replace(/\r?\n/g, '').replace(/\s+/g, ' ').trim();
+        if (/주식회\s*사$/.test(cleaned)) return cleaned.replace(/\s*주식회\s*사$/, ' 주식회사').trim();
+        return cleaned.replace(/(?<=[가-힣])\s+(?=[가-힣])/g, '');
+      }
+      function parsePdfFields(lines, tokens) {
+        const chunks = [...lines, ...tokens];
+        const contractDate = findDateValue(chunks, [/계\s*약\s*일\s*자/i, /contract\s*date/i]);
+        const deliveryDeadline = findDateValue(chunks, [/[납남]\s*품\s*기\s*한/i, /delivery\s*(?:deadline|due)/i]);
+        const topCodes = lines.slice(0, 22).map(line => String(line).trim().match(/^([0-9]{3,9})$/)?.[1]).filter(Boolean);
+        const vendor = findPdfValue(chunks, [/납\s*품\s*업\s*체/i, /거래처\s*명/i, /업체\s*명/i, /vendor/i], 'vendor');
+        return {
+          orderNo: topCodes.length >= 2 ? topCodes[0] : findPdfValue(chunks, [/발\s*주\s*번\s*호/i, /order\s*(?:number|no)/i], 'code'),
+          inspectionNo: topCodes.length >= 2 ? topCodes[1] : findPdfValue(chunks, [/검\s*수\s*번\s*호/i, /inspection\s*(?:number|no)/i], 'code'),
+          budgetItem: findPdfValue(chunks, [/예\s*산\s*항\s*목/i], 'text'),
+          projectNo: findPdfValue(chunks, [/과\s*제\s*번\s*호/i], 'code'),
+          installationLocation: findPdfValue(chunks, [/설\s*치\s*장\s*소/i], 'text'),
+          contractDate,
+          deliveryDeadline,
+          contractPeriod: contractDate && deliveryDeadline ? `${contractDate} ~ ${deliveryDeadline}` : '',
+          deliveryDate: findDateValue(chunks, [/납\s*품\s*일\s*자/i]),
+          budgetAmount: findPdfValue(chunks, [/예\s*산\s*금\s*액/i], 'amount'),
+          contractAmount: findPdfValue(chunks, [/계\s*약\s*금\s*액/i], 'amount'),
+          delayDays: findPdfValue(chunks, [/지\s*체\s*일\s*수/i], 'code'),
+          delayCompensation: findPdfValue(chunks, [/지\s*체\s*상\s*환\s*금/i], 'amount'),
+          product: tidyOcrTitle(findPdfValue(chunks, [/◆?\s*제\s*목/i, /물품\s*\(?건명\)?/i, /제품\s*명/i, /title/i, /product/i], 'text')),
+          itemName: findPdfValue(chunks, [/물\s*품\s*\(?건명\)?/i], 'text'),
+          specification: findPdfValue(chunks, [/규\s*격/i], 'text'),
+          unit: findPdfValue(chunks, [/단\s*위/i], 'text'),
+          quantity: findPdfValue(chunks, [/수\s*량/i], 'code'),
+          itemNote: findPdfValue(chunks, [/비\s*고/i], 'text'),
+          departmentAffiliation: findPdfValue(chunks, [/청\s*구\s*부\s*서|소\s*속/i], 'text'),
+          recipientName: findPdfValue(chunks, [/인\s*수\s*자.*성\s*명|성\s*명/i], 'text'),
+          inspectionDate: findDateValue(chunks, [/검\s*수\s*일\s*자/i]),
+          inspector: findPdfValue(chunks, [/검\s*수\s*인/i], 'text'),
+          vendor: cleanVendor(vendor),
+          amount: findPdfValue(chunks, [/납\s*품\s*금\s*액/i, /delivery\s*amount/i, /amount/i], 'amount')
+        };
+      }
+      async function readPdf(file) {
+        const loadingTask = pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+        const pdf = await loadingTask.promise;
+        const lines = []; const tokens = [];
+        for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
+          const page = await pdf.getPage(pageNumber);
+          const content = await page.getTextContent();
+          const items = content.items.filter(item => item.str?.trim()).map(item => ({ text: item.str.trim(), x: item.transform?.[4] || 0, y: item.transform?.[5] || 0 }));
+          tokens.push(...items.map(item => item.text));
+          items.sort((a, b) => Math.abs(b.y - a.y) > 2 ? b.y - a.y : a.x - b.x);
+          let current = []; let currentY = null;
+          for (const item of items) {
+            if (currentY === null || Math.abs(item.y - currentY) <= 2) current.push(item.text);
+            else { lines.push(current.join(' ')); current = [item.text]; }
+            currentY = item.y;
+          }
+          if (current.length) lines.push(current.join(' '));
+        }
+        return { lines, tokens, pageCount: pdf.numPages };
+      }
+      async function renderPdfPage(pdf, pageNumber, maxWidth = 1500) {
+        const page = await pdf.getPage(pageNumber);
+        const base = page.getViewport({ scale: 1 });
+        const scale = Math.min(2.35, maxWidth / base.width);
+        const viewport = page.getViewport({ scale });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+        await page.render({ canvasContext: canvas.getContext('2d', { alpha: false }), viewport }).promise;
+        return canvas;
+      }
+      async function imageFileCanvas(file) {
+        const image = await createImageBitmap(file);
+        const scale = Math.min(2, 1800 / image.width);
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(image.width * scale); canvas.height = Math.round(image.height * scale);
+        const context = canvas.getContext('2d', { alpha: false });
+        context.imageSmoothingEnabled = true; context.imageSmoothingQuality = 'high';
+        context.drawImage(image, 0, 0, canvas.width, canvas.height); image.close();
+        return canvas;
+      }
+      async function createOcrWorker() {
+        return Tesseract.createWorker('kor', 1, {
+          workerPath: new URL('./vendor/tesseract-worker.min.js', import.meta.url).href,
+          langPath: new URL('./vendor/tessdata/', import.meta.url).href,
+          corePath: new URL('./vendor/tesseract-core-simd-lstm.js', import.meta.url).href,
+          workerBlobURL: false,
+          logger: info => { if (info.status === 'recognizing text') setPdfStatus(`스캔 문서가 감지되었습니다. 이미지 분석 중... ${Math.round((info.progress || 0) * 100)}%`); }
+        });
+      }
+      function normalizeRegionValue(kind, text) {
+        const raw = String(text || '').replace(/[|¦]/g, ' ').replace(/\s+/g, ' ').trim();
+        if (kind === 'code') return raw.match(/\d{3,9}/)?.[0] || '';
+        if (kind === 'date') {
+          const date = raw.match(/(20\d{2})\s*(?:년|[.\/-])\s*(\d{1,2})\s*(?:월|[.\/-])\s*(\d{1,2})/);
+          return date ? `${date[1]}-${date[2].padStart(2, '0')}-${date[3].padStart(2, '0')}` : '';
+        }
+        if (kind === 'amount') { const amount = parseAmount(raw); return amount >= 1000 ? amount : 0; }
+        if (kind === 'vendor') return cleanVendor(text);
+        if (kind === 'title') return tidyOcrTitle(raw);
+        return raw;
+      }
+      async function recognizeRegion(worker, canvas, definition) {
+        const rectangle = {
+          left: Math.round(definition.rect[0] * canvas.width), top: Math.round(definition.rect[1] * canvas.height),
+          width: Math.round(definition.rect[2] * canvas.width), height: Math.round(definition.rect[3] * canvas.height)
+        };
+        await worker.setParameters({
+          tessedit_pageseg_mode: definition.kind === 'code' ? Tesseract.PSM.SINGLE_LINE : Tesseract.PSM.SINGLE_BLOCK,
+          tessedit_char_whitelist: definition.kind === 'code' ? '0123456789' : '', preserve_interword_spaces: '1'
+        });
+        const { data } = await worker.recognize(canvas, { rectangle }, { text: true });
+        return { value: normalizeRegionValue(definition.kind, data.text), confidence: Math.round(data.confidence || 0) };
+      }
+      async function recognizeStandardForm(worker, canvas) {
+        const definitions = {
+          orderNo: { kind: 'code', rect: [.47, .12, .14, .05] },
+          inspectionNo: { kind: 'code', rect: [.78, .12, .15, .05] },
+          vendor: { kind: 'vendor', rect: [.17, .212, .31, .05] },
+          contractDate: { kind: 'date', rect: [.17, .257, .31, .045] },
+          deliveryDeadline: { kind: 'date', rect: [.16, .285, .34, .06] },
+          budgetAmount: { kind: 'amount', rect: [.17, .355, .32, .055] },
+          contractAmount: { kind: 'amount', rect: [.74, .245, .24, .055] },
+          amount: { kind: 'amount', rect: [.74, .355, .24, .055] },
+          product: { kind: 'title', rect: [.16, .405, .82, .055] }
+        };
+        const values = {};
+        for (const [key, definition] of Object.entries(definitions)) values[key] = await recognizeRegion(worker, canvas, definition);
+        return values;
+      }
+      async function runOcrDocument(file, isPdf) {
+        const worker = await createOcrWorker();
+        const texts = []; let previewUrl = ''; let pageCount = 1; let regions = {};
+        try {
+          const pdf = isPdf ? await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise : null;
+          pageCount = pdf?.numPages || 1;
+          for (let pageNumber = 1; pageNumber <= pageCount; pageNumber++) {
+            setPdfStatus(`스캔 문서가 감지되었습니다. 이미지 분석 중... (${pageNumber}/${pageCount}페이지)`);
+            const canvas = pdf ? await renderPdfPage(pdf, pageNumber) : await imageFileCanvas(file);
+            if (pageNumber === 1) previewUrl = canvas.toDataURL('image/jpeg', .78);
+            await worker.setParameters({ tessedit_pageseg_mode: Tesseract.PSM.SPARSE_TEXT, tessedit_char_whitelist: '', preserve_interword_spaces: '1' });
+            const { data } = await worker.recognize(canvas, {}, { text: true });
+            texts.push(data.text || '');
+            if (pageNumber === 1) regions = await recognizeStandardForm(worker, canvas);
+            canvas.width = 1; canvas.height = 1;
+          }
+          return { text: texts.join('\n'), regions, previewUrl, pageCount };
+        } finally { await worker.terminate(); }
+      }
+      async function createPdfPreview(file) {
+        const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+        const canvas = await renderPdfPage(pdf, 1, 900);
+        const previewUrl = canvas.toDataURL('image/jpeg', .76); canvas.width = 1; canvas.height = 1;
+        return { previewUrl, pageCount: pdf.numPages };
+      }
+      function mergeRecognizedFields(parsed, regionResults, textMode = false) {
+        const data = { ...parsed }; const confidence = {};
+        if (!textMode) {
+          if (/^20\d{2}[-년./]/.test(data.installationLocation || '') || /계약일자|납품기한/.test(data.installationLocation || '')) data.installationLocation = '';
+          if (/^(규격|단위|수량|비고)$/i.test(data.itemName || '')) data.itemName = '';
+          if (/인수자|인수확인|성명/.test(data.departmentAffiliation || '')) data.departmentAffiliation = '';
+          if (data.recipientName && !/^[가-힣]{2,5}$/.test(data.recipientName)) data.recipientName = '';
+          if (data.inspector && !/^[가-힣]{2,5}$/.test(data.inspector)) data.inspector = '';
+        }
+        Object.keys(data).forEach(key => { if (data[key] !== '' && data[key] !== 0 && data[key] != null) confidence[key] = textMode ? 100 : 68; });
+        for (const [key, result] of Object.entries(regionResults || {})) {
+          if (!result?.value) continue;
+          if (!data[key] || result.confidence >= (confidence[key] || 0)) { data[key] = result.value; confidence[key] = result.confidence; }
+        }
+        data.contractPeriod = data.contractDate && data.deliveryDeadline ? `${data.contractDate} ~ ${data.deliveryDeadline}` : '';
+        confidence.contractPeriod = Math.min(confidence.contractDate || 0, confidence.deliveryDeadline || 0);
+        return { data, confidence };
+      }
+      function renderExtractionReview(data, confidence, previewUrl, pageCount) {
+        const labels = { orderNo: '발주번호', inspectionNo: '검수번호', budgetItem: '예산항목', vendor: '납품업체', projectNo: '과제번호', installationLocation: '설치장소', contractDate: '계약일자', deliveryDeadline: '납품기한', deliveryDate: '납품일자', budgetAmount: '예산금액', contractAmount: '계약금액', amount: '납품금액', product: '제목', itemName: '물품(건명)', specification: '규격', unit: '단위', quantity: '수량', departmentAffiliation: '청구부서/소속', recipientName: '인수자 성명', inspectionDate: '검수일자', inspector: '검수인' };
+        const moneyKeys = new Set(['budgetAmount', 'contractAmount', 'amount', 'delayCompensation']);
+        $('documentPreview').src = previewUrl || '';
+        $('previewCaption').textContent = `첫 페이지 미리보기 · 총 ${pageCount}페이지`;
+        $('extractedList').innerHTML = Object.entries(labels).filter(([key]) => data[key] !== '' && data[key] !== 0 && data[key] != null).map(([key, label]) => {
+          const shown = moneyKeys.has(key) ? Number(data[key]).toLocaleString('ko-KR') + '원' : String(data[key]);
+          const flag = confidence[key] > 0 && confidence[key] < 70 ? '<span class="review-flag"> · 확인 필요</span>' : '';
+          return `<dt>${label}</dt><dd>${escapeHtml(shown)}${flag}</dd>`;
+        }).join('') || '<dt>결과</dt><dd>자동으로 확인된 값이 없습니다.</dd>';
+        $('documentReview').classList.remove('hidden'); $('documentReview').open = true;
+      }
+      function applyPrimaryFields(fields, confidence) {
+        const mappings = { orderNo: 'orderNo', inspectionNo: 'inspectionNo', contractPeriod: 'contractPeriod', product: 'product', vendor: 'vendor' };
+        Object.values(mappings).forEach(id => { $(id).classList.remove('needs-review'); $(id).removeAttribute('title'); });
+        $('amount').classList.remove('needs-review'); $('amount').removeAttribute('title');
+        for (const [key, id] of Object.entries(mappings)) if (fields[key]) $(id).value = fields[key];
+        if (fields.amount) $('amount').value = Number(fields.amount).toLocaleString('ko-KR');
+        for (const [key, id] of [...Object.entries(mappings), ['amount', 'amount']]) if (fields[key] && confidence[key] > 0 && confidence[key] < 70) { $(id).classList.add('needs-review'); $(id).title = '자동 인식 신뢰도가 낮습니다. 원본과 비교해 확인해주세요.'; }
+      }
+      async function handlePdf(file) {
+        if (!file) return;
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        const isImage = file.type.startsWith('image/') || /\.(png|jpe?g)$/i.test(file.name);
+        if (!isPdf && !isImage) { setPdfStatus('PDF, PNG, JPG 파일만 선택할 수 있습니다.', 'error'); return; }
+        pdfImported = true;
+        lastStructuredData = null;
+        setPdfStatus('PDF 분석 중...');
+        try {
+          let lines = []; let tokens = []; let previewUrl = ''; let pageCount = 1; let regionResults = {}; let textMode = false;
+          if (isPdf) { const extracted = await readPdf(file); lines = extracted.lines; tokens = extracted.tokens; pageCount = extracted.pageCount; textMode = tokens.join(' ').trim().length >= 80; }
+          if (isImage || !textMode) {
+            setPdfStatus('스캔 문서가 감지되었습니다. 이미지 분석 중...');
+            const recognized = await runOcrDocument(file, isPdf);
+            lines = recognized.text.split(/\r?\n/).filter(Boolean); tokens = recognized.text.split(/\s+/).filter(Boolean);
+            previewUrl = recognized.previewUrl; pageCount = recognized.pageCount; regionResults = recognized.regions;
+          } else ({ previewUrl, pageCount } = await createPdfPreview(file));
+          const merged = mergeRecognizedFields(parsePdfFields(lines, tokens), regionResults, textMode);
+          const fields = merged.data; lastStructuredData = fields;
+          applyPrimaryFields(fields, merged.confidence);
+          updateFolderPreview();
+          const found = [fields.orderNo && '발주번호', fields.inspectionNo && '검수번호', fields.contractPeriod && '계약기간', fields.product && '물품명', fields.vendor && '거래처명', fields.amount && '납품금액'].filter(Boolean);
+          renderExtractionReview(fields, merged.confidence, previewUrl, pageCount);
+          if (found.length) setPdfStatus(`문서 인식 완료 · ${found.length}개 핵심항목을 자동 입력했습니다. 저장 전에 확인해주세요.`, 'success');
+          else setPdfStatus('문서 내용을 자동으로 인식하지 못했습니다. 직접 입력하거나 다른 파일을 업로드해주세요.', 'error');
+        } catch (error) {
+          console.error('Document recognition failed', error);
+          setPdfStatus('문서 내용을 자동으로 인식하지 못했습니다. 직접 입력하거나 다른 파일을 업로드해주세요.', 'error');
+        }
+      }
+      function saveForm() {
+        const data = { orderNo: normalize($('orderNo').value), inspectionNo: normalize($('inspectionNo').value), contractPeriod: $('contractPeriod').value.trim(), product: normalize($('product').value), amount: parseAmount($('amount').value), vendor: normalize($('vendor').value), note: $('note').value.trim() };
+        if (!data.inspectionNo || !data.product || !data.vendor || data.amount <= 0) { showToast('검수번호, 제품명, 납품금액, 거래처명을 확인해주세요.'); return false; }
+        const duplicate = cases.some(x => x.inspectionNo.toLowerCase() === data.inspectionNo.toLowerCase() && x.id !== editingId);
+        if (duplicate) { showToast('같은 검수번호가 이미 있습니다.'); return false; }
+        if (editingId) {
+          cases = cases.map(x => {
+            if (x.id !== editingId) return x;
+            const updated = { ...x, ...data, extractedData: lastStructuredData || x.extractedData || null, docs: { ...x.docs, inspectionReport: pdfImported || !!x.docs?.inspectionReport, warrantyInsurance: data.amount >= WARRANTY_THRESHOLD ? !!x.docs?.warrantyInsurance : false }, updatedAt: Date.now() };
+            return updated;
+          });
+        } else {
+          const docs = blankDocs(); docs.inspectionReport = pdfImported;
+          cases.unshift({ id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), ...data, extractedData: lastStructuredData, docs, inspectionSigned: false, receiptSigned: false, emailSent: false, sheetRecorded: false, createdAt: Date.now() });
+        }
+        saveCases(); render(); showToast(editingId ? '검수 건을 수정했습니다.' : '검수 건을 추가했습니다.'); return true;
+      }
+      function toggleDoc(item, key) {
+        item.docs = { ...blankDocs(), ...(item.docs || {}), [key]: !item.docs?.[key] };
+        const doc = DOCS.find(d => d.key === key);
+        if (doc?.signKey && !item.docs[key]) item[doc.signKey] = false;
+      }
+      function toggleSignedDoc(item, docKey, signKey) {
+        const complete = !!item.docs?.[docKey] && !!item[signKey];
+        item.docs = { ...blankDocs(), ...(item.docs || {}), [docKey]: !complete };
+        item[signKey] = !complete;
+      }
+      function addSamples() {
+        if (cases.length && !confirm('현재 목록에 샘플 검수 건 3개를 추가할까요?')) return;
+        const sample = (no, product, vendor, amount, docCount, signedCount, emailSent = false, sheetRecorded = false) => {
+          const docs = blankDocs(); requiredDocs({ amount }).slice(0, docCount).forEach(d => docs[d.key] = true);
+          return { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), orderNo: '', inspectionNo: no, contractPeriod: '', product, vendor, amount, note: '', docs, inspectionSigned: signedCount > 0, receiptSigned: signedCount > 1, emailSent, sheetRecorded, createdAt: Date.now() };
+        };
+        cases = [...[sample('2026-014', '연구용 워크스테이션', '미래정보시스템', 18500000, 8, 2), sample('2026-013', '실험실 공기청정기', '그린테크', 4200000, 7, 1), sample('2026-012', '회의실 전자칠판', '한빛솔루션', 9800000, 5, 0)], ...cases];
+        saveCases(); render(); showToast('샘플 검수 건을 추가했습니다.');
+      }
+
+      $('addBtn').addEventListener('click', () => openDialog());
+      $('emptyAddBtn').addEventListener('click', () => openDialog());
+      $('sampleBtn').addEventListener('click', addSamples);
+      $('searchInput').addEventListener('input', render);
+      $('statusFilter').addEventListener('change', render);
+      document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', closeDialog));
+      $('caseDialog').addEventListener('cancel', (event) => { event.preventDefault(); closeDialog(); });
+      ['inspectionNo', 'product', 'vendor'].forEach(id => $(id).addEventListener('input', updateFolderPreview));
+      $('amount').addEventListener('input', (event) => { const digits = event.target.value.replace(/[^0-9]/g, ''); event.target.value = digits ? Number(digits).toLocaleString('ko-KR') : ''; });
+      $('pdfInput').addEventListener('change', (event) => handlePdf(event.target.files?.[0]));
+      $('caseForm').addEventListener('submit', (event) => {
+        if (event.submitter?.value === 'save' && !saveForm()) event.preventDefault();
+      });
+      $('tableBody').addEventListener('click', async (event) => {
+        const target = event.target.closest('[data-action]'); if (!target) return;
+        const item = cases.find(x => x.id === target.dataset.id); if (!item) return;
+        const action = target.dataset.action;
+        if (action === 'email' || action === 'sheet' || action === 'note') return;
+        if (action === 'toggle-doc') toggleDoc(item, target.dataset.key);
+        if (action === 'toggle-signed-doc') toggleSignedDoc(item, target.dataset.key, target.dataset.signKey);
+        if (action === 'edit') return openDialog(item);
+        if (action === 'delete') { if (!confirm(`${item.inspectionNo} 검수 건을 삭제할까요?`)) return; cases = cases.filter(x => x.id !== item.id); }
+        if (action === 'copy') { try { await navigator.clipboard.writeText(folderName(item)); showToast('폴더명을 복사했습니다.'); } catch { showToast('폴더명: ' + folderName(item)); } return; }
+        saveCases(); render();
+      });
+      $('tableBody').addEventListener('change', (event) => {
+        const target = event.target.closest('[data-action]'); if (!target) return;
+        const item = cases.find(x => x.id === target.dataset.id); if (!item) return;
+        if (target.dataset.action === 'email') item.emailSent = target.checked;
+        if (target.dataset.action === 'sheet') item.sheetRecorded = target.checked;
+        if (target.dataset.action === 'note') { item.note = target.value.trim(); saveCases(); showToast('비고를 저장했습니다.'); return; }
+        saveCases(); render();
+        const labels = { email: '메일 발송', sheet: '검수관리대장 기록' };
+        showToast(`${labels[target.dataset.action]}을 ${target.checked ? '완료' : '미완료'}로 표시했습니다.`);
+      });
+      $('tableBody').addEventListener('input', (event) => {
+        const target = event.target.closest('textarea[data-action="note"]'); if (!target) return;
+        const item = cases.find(x => x.id === target.dataset.id); if (!item) return;
+        item.note = target.value; saveCases();
+      });
+
+      function registerWebMCP() {
+        const context = document.modelContext; if (!context?.registerTool) return;
+        const tool = {
+          name: 'add_inspection_case', title: '검수 건 추가',
+          description: '발주번호, 검수번호, 계약기간, 물품명, 납품금액, 거래처명으로 새 자산 검수 건을 진행표에 추가합니다.',
+          inputSchema: { type: 'object', properties: { orderNo: { type: 'string' }, inspectionNo: { type: 'string' }, contractPeriod: { type: 'string' }, product: { type: 'string' }, amount: { type: 'number', minimum: 1 }, vendor: { type: 'string' }, note: { type: 'string' } }, required: ['inspectionNo', 'product', 'amount', 'vendor'], additionalProperties: false },
+          annotations: { readOnlyHint: false, untrustedContentHint: false },
+          execute(input) {
+            if (!input || !normalize(input.inspectionNo) || !normalize(input.product) || parseAmount(input.amount) <= 0 || !normalize(input.vendor)) throw new Error('검수번호, 제품명, 납품금액, 거래처명이 필요합니다.');
+            if (cases.some(x => x.inspectionNo.toLowerCase() === normalize(input.inspectionNo).toLowerCase())) throw new Error('같은 검수번호가 이미 있습니다.');
+            const item = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), orderNo: normalize(input.orderNo), inspectionNo: normalize(input.inspectionNo), contractPeriod: String(input.contractPeriod || '').trim(), product: normalize(input.product), amount: parseAmount(input.amount), vendor: normalize(input.vendor), note: String(input.note || '').trim(), docs: blankDocs(), inspectionSigned: false, receiptSigned: false, emailSent: false, sheetRecorded: false, createdAt: Date.now() };
+            cases.unshift(item); saveCases(); render(); return { inspectionNo: item.inspectionNo, folderName: folderName(item), warrantyRequired: warrantyRequired(item), status: statusLabel(statusOf(item)) };
+          }
+        };
+        Promise.resolve(context.registerTool(tool)).catch(() => {});
+      }
+      render(); registerWebMCP();
+    })();
+  </script>
+</body>
+</html>

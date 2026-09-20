@@ -44,7 +44,14 @@
     .brand p { margin: 2px 0 0; color: var(--muted); font-size: .88rem; }
     .privacy-note { color: var(--muted); font-size: .82rem; text-align: right; max-width: 430px; padding: 8px 12px; border-radius: 9px; background: #f4f7fb; }
 
-    main { max-width: 1480px; margin: 0 auto; padding: 24px 28px 48px; }
+    .app-shell { max-width: 1480px; margin: 0 auto; padding: 24px 28px 48px; display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 20px; align-items: start; }
+    main { min-width: 0; }
+    .year-nav { position: sticky; top: 20px; padding: 13px; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: var(--shadow); }
+    .year-nav-title { padding: 3px 7px 9px; color: var(--muted); font-size: .75rem; font-weight: 900; letter-spacing: .02em; }
+    .year-tabs { display: grid; gap: 7px; }
+    .year-tab { width: 100%; min-height: 48px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--navy-2); font-weight: 900; text-align: left; padding: 0 12px; }
+    .year-tab:hover { background: var(--soft); }
+    .year-tab.active { color: white; background: linear-gradient(135deg, var(--navy), var(--blue)); box-shadow: 0 5px 12px rgba(36,87,214,.18); }
     .summary { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
     .stat { position: relative; overflow: hidden; background: var(--paper); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; box-shadow: 0 5px 16px rgba(20,33,61,.035); }
     .stat::after { content: ''; position: absolute; inset: auto 0 0; height: 3px; background: #c8d3df; }
@@ -173,7 +180,12 @@
     .toast.show { transform: translateY(0); opacity: 1; }
 
     @media (max-width: 900px) {
-      .topbar-inner, main { padding-left: 16px; padding-right: 16px; }
+      .topbar-inner { padding-left: 16px; padding-right: 16px; }
+      .app-shell { display: block; padding: 16px 16px 40px; }
+      .year-nav { position: static; margin-bottom: 14px; padding: 8px; }
+      .year-nav-title { padding: 2px 6px 7px; }
+      .year-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 6px; }
+      .year-tab { min-height: 42px; text-align: center; padding: 0 6px; }
       .privacy-note { display: none; }
       .summary { grid-template-columns: repeat(2, 1fr); }
       .summary .stat:last-child { grid-column: 1 / -1; }
@@ -208,7 +220,16 @@
     </div>
   </header>
 
-  <main>
+  <div class="app-shell">
+    <aside class="year-nav" aria-label="검수 연도 선택">
+      <div class="year-nav-title">검수 연도</div>
+      <div class="year-tabs" role="tablist" aria-label="연도별 검수 목록">
+        <button class="year-tab active" type="button" role="tab" data-year="2026" aria-selected="true">2026년</button>
+        <button class="year-tab" type="button" role="tab" data-year="2027" aria-selected="false">2027년</button>
+        <button class="year-tab" type="button" role="tab" data-year="2028" aria-selected="false">2028년</button>
+      </div>
+    </aside>
+    <main>
     <section class="summary" aria-label="진행 현황 요약">
       <article class="stat"><div class="stat-label">전체 검수 건</div><div class="stat-value"><strong id="totalCount">0</strong><small>건</small></div></article>
       <article class="stat collect"><div class="stat-label">서류 수집 중</div><div class="stat-value"><strong id="collectCount">0</strong><small>건</small></div></article>
@@ -268,7 +289,8 @@
         <button class="btn btn-primary" type="button" id="emptyAddBtn">첫 검수 건 추가</button>
       </div>
     </section>
-  </main>
+    </main>
+  </div>
 
   <dialog id="caseDialog">
     <form method="dialog" id="caseForm">
@@ -291,11 +313,11 @@
         </details>
         <div class="fields">
           <div class="field"><label for="orderNo">발주번호</label><input id="orderNo" name="orderNo" autocomplete="off" placeholder="예: 505"></div>
-          <div class="field"><label for="inspectionNo">검수번호 <span style="font-weight:500;color:var(--muted)">(숫자 3자리)</span></label><div class="inspection-input"><span class="inspection-prefix" aria-hidden="true">2026-</span><input id="inspectionNo" name="inspectionNo" required inputmode="numeric" maxlength="3" pattern="[0-9]{3}" autocomplete="off" placeholder="예: 029" aria-label="2026년 검수번호 숫자 3자리"></div></div>
+          <div class="field"><label for="inspectionNo">검수번호 <span style="font-weight:500;color:var(--muted)">(숫자 3자리)</span></label><div class="inspection-input"><span class="inspection-prefix" id="inspectionPrefix" aria-hidden="true">2026-</span><input id="inspectionNo" name="inspectionNo" required inputmode="numeric" maxlength="3" pattern="[0-9]{3}" autocomplete="off" placeholder="예: 029" aria-label="검수번호 숫자 3자리"></div></div>
           <div class="field full"><label for="contractPeriod">계약기간</label><input id="contractPeriod" name="contractPeriod" autocomplete="off" placeholder="예: 2026-04-24 ~ 2026-05-22"></div>
-          <div class="field full"><label for="product">물품명 <span style="font-weight:500;color:var(--muted)">(검수조서의 제목)</span></label><input id="product" name="product" required autocomplete="off" placeholder="예: 산학협력단 연구개발사업 수행을 위한 시설공사"></div>
-          <div class="field"><label for="amount">납품금액</label><input id="amount" name="amount" required inputmode="numeric" autocomplete="off" placeholder="예: 23,300,000"></div>
-          <div class="field"><label for="vendor">거래처명 <span style="font-weight:500;color:var(--muted)">(납품업체)</span></label><input id="vendor" name="vendor" required autocomplete="off" placeholder="예: 재성이엔지"></div>
+          <div class="field full"><label for="product">물품명 <span style="font-weight:500;color:var(--muted)">(검수조서의 제목)</span></label><input id="product" name="product" required autocomplete="off" placeholder="예: 고성능 노트북"></div>
+          <div class="field"><label for="amount">납품금액</label><input id="amount" name="amount" required inputmode="numeric" autocomplete="off" placeholder="예: 1000000"></div>
+          <div class="field"><label for="vendor">거래처명 <span style="font-weight:500;color:var(--muted)">(납품업체)</span></label><input id="vendor" name="vendor" required autocomplete="off" placeholder="예: 한빛 IT"></div>
           <div class="field full"><label>폴더명 미리보기</label><div class="folder-preview" id="folderPreview">검수번호-제품명-거래처명</div></div>
           <div class="field full"><label for="note">비고 <span style="font-weight:500;color:var(--muted)">(선택)</span></label><textarea id="note" name="note" placeholder="보완 요청 사항이나 담당자 확인 내용을 기록하세요."></textarea></div>
         </div>
@@ -322,9 +344,10 @@
       ];
       const STORAGE_KEY = 'assetInspectionTracker.v1';
       const WARRANTY_THRESHOLD = 1000000;
-      const INSPECTION_YEAR = '2026';
+      const INSPECTION_YEARS = ['2026', '2027', '2028'];
       const $ = (id) => document.getElementById(id);
       let cases = loadCases();
+      let activeYear = INSPECTION_YEARS[0];
       let editingId = null;
       let pdfImported = false;
       let lastStructuredData = null;
@@ -334,12 +357,12 @@
       function normalize(value) { return String(value || '').trim().replace(/[\\/:*?\"<>|]/g, '_').replace(/\s+/g, ' '); }
       function inspectionSuffix(value) {
         const raw = String(value || '').trim();
-        const withoutYear = raw.replace(new RegExp(`^${INSPECTION_YEAR}\\D*`), '');
+        const withoutYear = raw.replace(/^\d{4}\D+/, '');
         return withoutYear.replace(/\D/g, '').slice(-3);
       }
       function formatInspectionNo(value) {
         const digits = inspectionSuffix(value);
-        return digits ? `${INSPECTION_YEAR}-${digits.padStart(3, '0')}` : '';
+        return digits ? `${activeYear}-${digits.padStart(3, '0')}` : '';
       }
       function currentInspectionNo() { return formatInspectionNo($('inspectionNo').value); }
       function folderName(item) { return [item.inspectionNo, item.product, item.vendor].map(normalize).join('-'); }
@@ -404,11 +427,22 @@
         const term = $('searchInput').value.trim().toLowerCase();
         const filter = $('statusFilter').value;
         return cases.filter(item => {
+          const matchesYear = String(item.inspectionNo || '').startsWith(`${activeYear}-`);
           const matchesText = !term || `${item.orderNo || ''} ${item.inspectionNo} ${item.product} ${item.vendor} ${item.contractPeriod || ''}`.toLowerCase().includes(term);
           const status = statusOf(item);
           const matchesStatus = filter === 'all' || filter === status || (filter === 'collect' && status === 'empty');
-          return matchesText && matchesStatus;
+          return matchesYear && matchesText && matchesStatus;
         }).sort(compareInspectionNo);
+      }
+      function renderYearTabs() {
+        document.querySelectorAll('.year-tab').forEach(button => {
+          const active = button.dataset.year === activeYear;
+          button.classList.toggle('active', active);
+          button.setAttribute('aria-selected', String(active));
+        });
+        $('inspectionPrefix').textContent = `${activeYear}-`;
+        $('inspectionNo').setAttribute('aria-label', `${activeYear}년 검수번호 숫자 3자리`);
+        $('contractPeriod').placeholder = `예: ${activeYear}-04-24 ~ ${activeYear}-05-22`;
       }
       function render() {
         const visible = filteredCases();
@@ -435,8 +469,9 @@
         updateSummary();
       }
       function updateSummary() {
-        const statuses = cases.map(statusOf);
-        $('totalCount').textContent = cases.length;
+        const yearCases = cases.filter(item => String(item.inspectionNo || '').startsWith(`${activeYear}-`));
+        const statuses = yearCases.map(statusOf);
+        $('totalCount').textContent = yearCases.length;
         $('collectCount').textContent = statuses.filter(s => s === 'amount' || s === 'collect' || s === 'empty').length;
         $('signCount').textContent = statuses.filter(s => s === 'sign').length;
         $('followupCount').textContent = statuses.filter(s => s === 'followup').length;
@@ -447,6 +482,7 @@
         editingId = item?.id || null;
         pdfImported = false;
         lastStructuredData = item?.extractedData || null;
+        renderYearTabs();
         $('dialogTitle').textContent = item ? '검수 건 수정' : '검수 건 추가';
         $('orderNo').value = item?.orderNo || '';
         $('inspectionNo').value = inspectionSuffix(item?.inspectionNo || '');
@@ -474,7 +510,7 @@
         if ($('caseDialog').open) $('caseDialog').close('cancel');
       }
       function updateFolderPreview() {
-        const values = [currentInspectionNo() || `${INSPECTION_YEAR}-검수번호`, $('product').value || '제품명', $('vendor').value || '거래처명'];
+        const values = [currentInspectionNo() || `${activeYear}-검수번호`, $('product').value || '제품명', $('vendor').value || '거래처명'];
         $('folderPreview').textContent = values.map(normalize).join('-');
       }
       function setPdfStatus(message, type = '') {
@@ -787,18 +823,19 @@
         item[signKey] = !complete;
       }
       function addSamples() {
-        if (cases.length && !confirm('현재 목록에 샘플 검수 건 3개를 추가할까요?')) return;
+        if (cases.length && !confirm(`${activeYear}년 목록에 샘플 검수 건 3개를 추가할까요?`)) return;
         const sample = (no, product, vendor, amount, docCount, signedCount, emailSent = false, sheetRecorded = false) => {
           const docs = blankDocs(); requiredDocs({ amount }).slice(0, docCount).forEach(d => docs[d.key] = true);
           return { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now() + Math.random()), orderNo: '', inspectionNo: no, contractPeriod: '', product, vendor, amount, note: '', docs, inspectionSigned: signedCount > 0, receiptSigned: signedCount > 1, emailSent, sheetRecorded, createdAt: Date.now() };
         };
-        cases = [...[sample('2026-014', '연구용 워크스테이션', '미래정보시스템', 18500000, 8, 2), sample('2026-013', '실험실 공기청정기', '그린테크', 4200000, 7, 1), sample('2026-012', '회의실 전자칠판', '한빛솔루션', 9800000, 5, 0)], ...cases];
+        cases = [...[sample(`${activeYear}-014`, '연구용 워크스테이션', '미래정보시스템', 18500000, 8, 2), sample(`${activeYear}-013`, '실험실 공기청정기', '그린테크', 4200000, 7, 1), sample(`${activeYear}-012`, '회의실 전자칠판', '한빛솔루션', 9800000, 5, 0)], ...cases];
         saveCases(); render(); showToast('샘플 검수 건을 추가했습니다.');
       }
 
       $('addBtn').addEventListener('click', () => openDialog());
       $('emptyAddBtn').addEventListener('click', () => openDialog());
       $('sampleBtn').addEventListener('click', addSamples);
+      document.querySelectorAll('.year-tab').forEach(button => button.addEventListener('click', () => { activeYear = button.dataset.year; $('searchInput').value = ''; $('statusFilter').value = 'all'; renderYearTabs(); render(); }));
       $('searchInput').addEventListener('input', render);
       $('statusFilter').addEventListener('change', render);
       document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', closeDialog));
@@ -861,7 +898,7 @@
         };
         Promise.resolve(context.registerTool(tool)).catch(() => {});
       }
-      render(); registerWebMCP();
+      renderYearTabs(); render(); registerWebMCP();
     })();
   </script>
 </body>

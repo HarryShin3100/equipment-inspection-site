@@ -136,11 +136,14 @@
     .dialog-head { position: sticky; top: 0; z-index: 2; padding: 19px 24px 15px; border-bottom: 1px solid var(--line); background: white; display: flex; align-items: center; justify-content: space-between; }
     .dialog-head h2 { margin: 0; color: var(--navy); font-size: 1.18rem; }
     .dialog-body { padding: 20px 24px; }
-    .pdf-import { margin-bottom: 18px; padding: 16px; border: 1px dashed #8aa4c3; border-radius: 14px; background: linear-gradient(135deg, #f7faff, #f0f6ff); }
-    .pdf-import-top { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .pdf-import { margin-bottom: 18px; padding: 18px; border: 2px dashed #8aa4c3; border-radius: 14px; background: linear-gradient(135deg, #f7faff, #f0f6ff); cursor: copy; transition: border-color .18s ease, background .18s ease, box-shadow .18s ease, transform .18s ease; }
+    .pdf-import:hover, .pdf-import:focus-visible { border-color: var(--blue); box-shadow: 0 0 0 3px rgba(36, 99, 235, .1); outline: none; }
+    .pdf-import.drag-over { border-color: var(--cyan); border-style: solid; background: #e7f9fb; box-shadow: 0 0 0 4px rgba(32, 169, 181, .16); transform: translateY(-2px); }
+    .pdf-import-top { display: flex; align-items: center; justify-content: center; gap: 13px; text-align: center; pointer-events: none; }
+    .drop-icon { width: 44px; height: 44px; flex: 0 0 auto; border-radius: 12px; display: grid; place-items: center; background: white; color: var(--blue); box-shadow: 0 4px 14px rgba(36, 99, 235, .12); }
     .pdf-import strong { color: var(--navy); font-size: .9rem; }
-    .pdf-import p { margin: 3px 0 0; color: var(--muted); font-size: .76rem; }
-    .pdf-file { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); }
+    .pdf-import p { margin: 4px 0 0; color: var(--muted); font-size: .8rem; }
+    .pdf-import small { display: block; margin-top: 4px; color: #718096; font-size: .7rem; }
     .pdf-status { margin-top: 9px; padding: 8px 10px; border-radius: 8px; background: white; color: var(--navy-2); font-size: .78rem; }
     .pdf-status.error { color: var(--red); background: #fff1f0; }
     .pdf-status.success { color: var(--green); background: #ecfdf3; }
@@ -159,6 +162,9 @@
     .field.full { grid-column: 1 / -1; }
     .field label { font-size: .83rem; color: var(--navy-2); font-weight: 900; }
     .field input, .field textarea { width: 100%; border: 1px solid #bcccdc; border-radius: 9px; padding: 10px 11px; background: #fbfdff; }
+    .inspection-input { display: flex; align-items: stretch; }
+    .inspection-prefix { display: grid; place-items: center; padding: 0 11px; border: 1px solid #bcccdc; border-right: 0; border-radius: 9px 0 0 9px; background: #edf2f7; color: var(--navy-2); font-weight: 900; }
+    .field .inspection-input input { border-radius: 0 9px 9px 0; }
     .field input.needs-review { border-color: #d8922b; background: #fffaf0; box-shadow: 0 0 0 2px rgba(216,146,43,.1); }
     .field textarea { min-height: 75px; resize: vertical; }
     .folder-preview { padding: 11px 12px; border-radius: 9px; background: var(--soft); color: var(--navy-2); font-size: .82rem; word-break: break-all; }
@@ -268,14 +274,14 @@
     <form method="dialog" id="caseForm">
       <div class="dialog-head"><h2 id="dialogTitle">검수 건 추가</h2><button class="icon-btn" data-close-dialog aria-label="닫기" type="button"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="m6 6 12 12M18 6 6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
       <div class="dialog-body">
-        <div class="pdf-import">
+        <div class="pdf-import" id="pdfDropZone" role="button" tabindex="0" aria-label="검수조서 PDF 또는 이미지를 끌어다 놓아 자동 분석">
           <div class="pdf-import-top">
-            <div><strong>검수조서 자동입력</strong><p>PDF 또는 사진을 이 브라우저 안에서만 분석합니다.</p></div>
-            <label class="btn btn-secondary" for="pdfInput">파일 선택</label>
-            <input class="pdf-file" id="pdfInput" type="file" accept="application/pdf,.pdf,image/png,image/jpeg,.png,.jpg,.jpeg">
+            <span class="drop-icon" aria-hidden="true"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 16V4m0 0L7.5 8.5M12 4l4.5 4.5M5 14v5h14v-5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+            <div><strong>검수조서 자동입력</strong><p>PDF 또는 이미지를 이곳에 끌어다 놓으면 바로 분석합니다.</p><small>문서는 외부로 전송하지 않고 이 브라우저 안에서만 처리합니다.</small></div>
           </div>
           <div class="pdf-status hidden" id="pdfStatus" role="status" aria-live="polite"></div>
         </div>
+        <input id="pdfInput" type="file" accept="application/pdf,.pdf,image/png,image/jpeg,.png,.jpg,.jpeg" hidden>
         <details class="document-review hidden" id="documentReview">
           <summary>원본 및 자동 추출 결과 확인</summary>
           <div class="review-grid">
@@ -285,7 +291,7 @@
         </details>
         <div class="fields">
           <div class="field"><label for="orderNo">발주번호</label><input id="orderNo" name="orderNo" autocomplete="off" placeholder="예: 505"></div>
-          <div class="field"><label for="inspectionNo">검수번호</label><input id="inspectionNo" name="inspectionNo" required autocomplete="off" placeholder="예: 00029"></div>
+          <div class="field"><label for="inspectionNo">검수번호 <span style="font-weight:500;color:var(--muted)">(숫자 3자리)</span></label><div class="inspection-input"><span class="inspection-prefix" aria-hidden="true">2026-</span><input id="inspectionNo" name="inspectionNo" required inputmode="numeric" maxlength="3" pattern="[0-9]{3}" autocomplete="off" placeholder="예: 029" aria-label="2026년 검수번호 숫자 3자리"></div></div>
           <div class="field full"><label for="contractPeriod">계약기간</label><input id="contractPeriod" name="contractPeriod" autocomplete="off" placeholder="예: 2026-04-24 ~ 2026-05-22"></div>
           <div class="field full"><label for="product">물품명 <span style="font-weight:500;color:var(--muted)">(검수조서의 제목)</span></label><input id="product" name="product" required autocomplete="off" placeholder="예: 산학협력단 연구개발사업 수행을 위한 시설공사"></div>
           <div class="field"><label for="amount">납품금액</label><input id="amount" name="amount" required inputmode="numeric" autocomplete="off" placeholder="예: 23,300,000"></div>
@@ -316,6 +322,7 @@
       ];
       const STORAGE_KEY = 'assetInspectionTracker.v1';
       const WARRANTY_THRESHOLD = 1000000;
+      const INSPECTION_YEAR = '2026';
       const $ = (id) => document.getElementById(id);
       let cases = loadCases();
       let editingId = null;
@@ -325,6 +332,16 @@
 
       function blankDocs() { return Object.fromEntries(DOCS.map(d => [d.key, false])); }
       function normalize(value) { return String(value || '').trim().replace(/[\\/:*?\"<>|]/g, '_').replace(/\s+/g, ' '); }
+      function inspectionSuffix(value) {
+        const raw = String(value || '').trim();
+        const withoutYear = raw.replace(new RegExp(`^${INSPECTION_YEAR}\\D*`), '');
+        return withoutYear.replace(/\D/g, '').slice(-3);
+      }
+      function formatInspectionNo(value) {
+        const digits = inspectionSuffix(value);
+        return digits ? `${INSPECTION_YEAR}-${digits.padStart(3, '0')}` : '';
+      }
+      function currentInspectionNo() { return formatInspectionNo($('inspectionNo').value); }
       function folderName(item) { return [item.inspectionNo, item.product, item.vendor].map(normalize).join('-'); }
       function parseAmount(value) { const amount = Number(String(value ?? '').replace(/[^0-9]/g, '')); return Number.isFinite(amount) ? amount : 0; }
       function formatAmount(value) { const amount = Number(value); return amount > 0 ? amount.toLocaleString('ko-KR') + '원' : '금액 미입력'; }
@@ -432,7 +449,7 @@
         lastStructuredData = item?.extractedData || null;
         $('dialogTitle').textContent = item ? '검수 건 수정' : '검수 건 추가';
         $('orderNo').value = item?.orderNo || '';
-        $('inspectionNo').value = item?.inspectionNo || '';
+        $('inspectionNo').value = inspectionSuffix(item?.inspectionNo || '');
         $('contractPeriod').value = item?.contractPeriod || '';
         $('product').value = item?.product || '';
         $('amount').value = item?.amount ? Number(item.amount).toLocaleString('ko-KR') : '';
@@ -457,7 +474,7 @@
         if ($('caseDialog').open) $('caseDialog').close('cancel');
       }
       function updateFolderPreview() {
-        const values = [$('inspectionNo').value || '검수번호', $('product').value || '제품명', $('vendor').value || '거래처명'];
+        const values = [currentInspectionNo() || `${INSPECTION_YEAR}-검수번호`, $('product').value || '제품명', $('vendor').value || '거래처명'];
         $('folderPreview').textContent = values.map(normalize).join('-');
       }
       function setPdfStatus(message, type = '') {
@@ -706,7 +723,7 @@
         const mappings = { orderNo: 'orderNo', inspectionNo: 'inspectionNo', contractPeriod: 'contractPeriod', product: 'product', vendor: 'vendor' };
         Object.values(mappings).forEach(id => { $(id).classList.remove('needs-review'); $(id).removeAttribute('title'); });
         $('amount').classList.remove('needs-review'); $('amount').removeAttribute('title');
-        for (const [key, id] of Object.entries(mappings)) if (fields[key]) $(id).value = fields[key];
+        for (const [key, id] of Object.entries(mappings)) if (fields[key]) $(id).value = key === 'inspectionNo' ? inspectionSuffix(formatInspectionNo(fields[key])) : fields[key];
         if (fields.amount) $('amount').value = Number(fields.amount).toLocaleString('ko-KR');
         for (const [key, id] of [...Object.entries(mappings), ['amount', 'amount']]) if (fields[key] && confidence[key] > 0 && confidence[key] < 70) { $(id).classList.add('needs-review'); $(id).title = '자동 인식 신뢰도가 낮습니다. 원본과 비교해 확인해주세요.'; }
       }
@@ -717,7 +734,7 @@
         if (!isPdf && !isImage) { setPdfStatus('PDF, PNG, JPG 파일만 선택할 수 있습니다.', 'error'); return; }
         pdfImported = true;
         lastStructuredData = null;
-        setPdfStatus('PDF 분석 중...');
+        setPdfStatus(`${file.name} 분석 중...`);
         try {
           let lines = []; let tokens = []; let previewUrl = ''; let pageCount = 1; let regionResults = {}; let textMode = false;
           if (isPdf) { const extracted = await readPdf(file); lines = extracted.lines; tokens = extracted.tokens; pageCount = extracted.pageCount; textMode = tokens.join(' ').trim().length >= 80; }
@@ -741,8 +758,10 @@
         }
       }
       function saveForm() {
-        const data = { orderNo: normalize($('orderNo').value), inspectionNo: normalize($('inspectionNo').value), contractPeriod: $('contractPeriod').value.trim(), product: normalize($('product').value), amount: parseAmount($('amount').value), vendor: normalize($('vendor').value), note: $('note').value.trim() };
-        if (!data.inspectionNo || !data.product || !data.vendor || data.amount <= 0) { showToast('검수번호, 제품명, 납품금액, 거래처명을 확인해주세요.'); return false; }
+        const inspectionDigits = inspectionSuffix($('inspectionNo').value);
+        const data = { orderNo: normalize($('orderNo').value), inspectionNo: inspectionDigits.length === 3 ? formatInspectionNo(inspectionDigits) : '', contractPeriod: $('contractPeriod').value.trim(), product: normalize($('product').value), amount: parseAmount($('amount').value), vendor: normalize($('vendor').value), note: $('note').value.trim() };
+        if (inspectionDigits.length !== 3) { showToast('검수번호 숫자 3자리를 입력해주세요.'); return false; }
+        if (!data.product || !data.vendor || data.amount <= 0) { showToast('제품명, 납품금액, 거래처명을 확인해주세요.'); return false; }
         const duplicate = cases.some(x => x.inspectionNo.toLowerCase() === data.inspectionNo.toLowerCase() && x.id !== editingId);
         if (duplicate) { showToast('같은 검수번호가 이미 있습니다.'); return false; }
         if (editingId) {
@@ -784,9 +803,16 @@
       $('statusFilter').addEventListener('change', render);
       document.querySelectorAll('[data-close-dialog]').forEach(button => button.addEventListener('click', closeDialog));
       $('caseDialog').addEventListener('cancel', (event) => { event.preventDefault(); closeDialog(); });
-      ['inspectionNo', 'product', 'vendor'].forEach(id => $(id).addEventListener('input', updateFolderPreview));
+      $('inspectionNo').addEventListener('input', (event) => { event.target.value = event.target.value.replace(/\D/g, '').slice(0, 3); updateFolderPreview(); });
+      ['product', 'vendor'].forEach(id => $(id).addEventListener('input', updateFolderPreview));
       $('amount').addEventListener('input', (event) => { const digits = event.target.value.replace(/[^0-9]/g, ''); event.target.value = digits ? Number(digits).toLocaleString('ko-KR') : ''; });
       $('pdfInput').addEventListener('change', (event) => handlePdf(event.target.files?.[0]));
+      const pdfDropZone = $('pdfDropZone');
+      ['dragenter', 'dragover'].forEach(type => pdfDropZone.addEventListener(type, (event) => { event.preventDefault(); event.stopPropagation(); pdfDropZone.classList.add('drag-over'); }));
+      ['dragleave', 'drop'].forEach(type => pdfDropZone.addEventListener(type, (event) => { event.preventDefault(); event.stopPropagation(); if (type === 'drop' || !pdfDropZone.contains(event.relatedTarget)) pdfDropZone.classList.remove('drag-over'); }));
+      pdfDropZone.addEventListener('drop', (event) => handlePdf(event.dataTransfer?.files?.[0]));
+      pdfDropZone.addEventListener('click', (event) => { if (event.target !== $('pdfInput')) $('pdfInput').click(); });
+      pdfDropZone.addEventListener('keydown', (event) => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); $('pdfInput').click(); } });
       $('caseForm').addEventListener('submit', (event) => {
         if (event.submitter?.value === 'save' && !saveForm()) event.preventDefault();
       });
@@ -826,9 +852,10 @@
           inputSchema: { type: 'object', properties: { orderNo: { type: 'string' }, inspectionNo: { type: 'string' }, contractPeriod: { type: 'string' }, product: { type: 'string' }, amount: { type: 'number', minimum: 1 }, vendor: { type: 'string' }, note: { type: 'string' } }, required: ['inspectionNo', 'product', 'amount', 'vendor'], additionalProperties: false },
           annotations: { readOnlyHint: false, untrustedContentHint: false },
           execute(input) {
-            if (!input || !normalize(input.inspectionNo) || !normalize(input.product) || parseAmount(input.amount) <= 0 || !normalize(input.vendor)) throw new Error('검수번호, 제품명, 납품금액, 거래처명이 필요합니다.');
-            if (cases.some(x => x.inspectionNo.toLowerCase() === normalize(input.inspectionNo).toLowerCase())) throw new Error('같은 검수번호가 이미 있습니다.');
-            const item = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), orderNo: normalize(input.orderNo), inspectionNo: normalize(input.inspectionNo), contractPeriod: String(input.contractPeriod || '').trim(), product: normalize(input.product), amount: parseAmount(input.amount), vendor: normalize(input.vendor), note: String(input.note || '').trim(), docs: blankDocs(), inspectionSigned: false, receiptSigned: false, emailSent: false, sheetRecorded: false, createdAt: Date.now() };
+            const formattedInspectionNo = formatInspectionNo(input?.inspectionNo);
+            if (!input || !formattedInspectionNo || !normalize(input.product) || parseAmount(input.amount) <= 0 || !normalize(input.vendor)) throw new Error('검수번호, 제품명, 납품금액, 거래처명이 필요합니다.');
+            if (cases.some(x => x.inspectionNo.toLowerCase() === formattedInspectionNo.toLowerCase())) throw new Error('같은 검수번호가 이미 있습니다.');
+            const item = { id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()), orderNo: normalize(input.orderNo), inspectionNo: formattedInspectionNo, contractPeriod: String(input.contractPeriod || '').trim(), product: normalize(input.product), amount: parseAmount(input.amount), vendor: normalize(input.vendor), note: String(input.note || '').trim(), docs: blankDocs(), inspectionSigned: false, receiptSigned: false, emailSent: false, sheetRecorded: false, createdAt: Date.now() };
             cases.unshift(item); saveCases(); render(); return { inspectionNo: item.inspectionNo, folderName: folderName(item), warrantyRequired: warrantyRequired(item), status: statusLabel(statusOf(item)) };
           }
         };
